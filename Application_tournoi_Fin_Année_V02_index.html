@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tournois EPS — Collège Pasteur</title>
+<script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-database-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+:root {
+  /* Couleurs sport actif (changent selon le sport sélectionné via JS) */
+  --accent:   #E8601C; --accent-l: #FDF0E8; --accent-m: #F5C4A0;
+  --blue:     #1A3A5C; --blue-l:   #EBF2FA; --blue-m:   #BCCFE0;
+  --green:    #2D7D46; --green-l:  #E6F4EA;
+  --red:      #C0392B; --red-l:    #FDEDEC;
+  --bg:       #F9F8F6;
+  --white:    #FFFFFF;
+  --g1: #F4F2EE; --g2: #E8E4DE; --g3: #CCC8C0;
+  --g4: #9A9186; --g5: #3D3630;
+  --shadow: 0 1px 10px rgba(0,0,0,.07);
+  --r: 10px; --font: 'Segoe UI', system-ui, sans-serif;
+}
+/* Variables sport : basket */
+body.sport-basket {
+  --accent: #E8601C; --accent-l: #FDF0E8; --accent-m: #F5C4A0;
+  --sport-icon: '🏀';
+}
+/* Variables sport : foot */
+body.sport-foot {
+  --accent: #2D7D46; --accent-l: #E6F4EA; --accent-m: #A8D5B5;
+  --sport-icon: '⚽';
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--g5);min-height:100vh;}
+
+/* ── HEADER ── */
+header{
+  background:var(--blue);color:white;
+  padding:0 18px;height:56px;
+  display:flex;align-items:center;justify-content:space-between;
+  box-shadow:0 2px 10px rgba(0,0,0,.22);
+  position:sticky;top:0;z-index:100;
+}
+.hd-left{display:flex;align-items:center;gap:10px;}
+#hd-sport-icon{font-size:1.3rem;line-height:1;}
+header h1{font-size:1rem;font-weight:700;}
+header h1 em{color:#C8A96E;font-style:normal;}
+.hd-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px;}
+.hd-meta{font-size:.74rem;opacity:.75;display:flex;align-items:center;gap:5px;}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+#year-display{font-weight:700;color:#C8A96E;font-size:.8rem;}
+.hd-school{font-size:.68rem;opacity:.55;letter-spacing:.3px;}
+
+/* ── SPORT SELECTOR (écran d'accueil) ── */
+#sport-home{
+  max-width:560px;margin:60px auto 0;padding:20px;
+}
+.sport-home-title{
+  text-align:center;font-size:1.2rem;font-weight:700;color:var(--blue);
+  margin-bottom:6px;
+}
+.sport-home-sub{text-align:center;font-size:.85rem;color:var(--g4);margin-bottom:28px;}
+.sport-cards{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.sport-card{
+  background:white;border-radius:14px;border:2.5px solid var(--g2);
+  padding:24px 16px;text-align:center;cursor:pointer;
+  transition:border-color .2s,box-shadow .2s,transform .1s;
+  box-shadow:var(--shadow);
+}
+.sport-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.1);transform:translateY(-2px);}
+.sport-card.basket:hover,.sport-card.basket.active{border-color:#E8601C;box-shadow:0 4px 16px rgba(232,96,28,.2);}
+.sport-card.foot:hover,.sport-card.foot.active{border-color:#2D7D46;box-shadow:0 4px 16px rgba(45,125,70,.2);}
+.sport-card-icon{font-size:2.8rem;margin-bottom:10px;}
+.sport-card-name{font-size:1rem;font-weight:700;color:var(--blue);}
+.sport-card-desc{font-size:.78rem;color:var(--g4);margin-top:4px;}
+
+/* ── NAV ── */
+nav{
+  background:white;display:flex;overflow-x:auto;
+  border-bottom:1.5px solid var(--g2);
+  box-shadow:0 1px 6px rgba(0,0,0,.05);
+  position:sticky;top:56px;z-index:90;
+}
+nav button{
+  padding:11px 15px;border:none;background:none;cursor:pointer;
+  font-size:.81rem;font-weight:600;color:var(--g4);white-space:nowrap;
+  border-bottom:3px solid transparent;margin-bottom:-1.5px;
+  transition:color .2s,border-color .2s;
+}
+nav button:hover{color:var(--blue);}
+nav button.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+/* ── SPORT BACK BUTTON ── */
+.sport-back{
+  display:inline-flex;align-items:center;gap:5px;
+  background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);
+  color:white;border-radius:6px;padding:4px 10px;font-size:.76rem;
+  font-weight:600;cursor:pointer;transition:background .2s;margin-right:8px;
+}
+.sport-back:hover{background:rgba(255,255,255,.25);}
+
+/* ── MAIN ── */
+main{max-width:1040px;margin:0 auto;padding:18px 14px;}
+.section{display:none;}.section.active{display:block;}
+
+/* ── YEAR BAR ── */
+.ybar{
+  display:flex;align-items:center;gap:7px;flex-wrap:wrap;
+  background:white;border-radius:var(--r);
+  padding:9px 14px;margin-bottom:16px;
+  box-shadow:var(--shadow);border:1px solid var(--g2);
+}
+.ybar label{font-weight:700;font-size:.82rem;color:var(--blue);white-space:nowrap;}
+.ybar select,.ybar input[type=number]{
+  border:1.5px solid var(--g3);border-radius:6px;
+  padding:5px 9px;font-size:.86rem;background:white;
+}
+
+/* ── CAT TABS (basket uniquement) ── */
+.ctabs{display:flex;gap:6px;margin-bottom:14px;}
+.ctab{
+  padding:6px 14px;border-radius:20px;border:2px solid;
+  font-weight:700;font-size:.8rem;cursor:pointer;transition:all .2s;background:white;
+}
+.ctab[data-cat=benjamin]{border-color:#E8601C;color:#E8601C;}
+.ctab[data-cat=benjamin].active{background:#E8601C;color:white;}
+.ctab[data-cat=minime]{border-color:var(--blue);color:var(--blue);}
+.ctab[data-cat=minime].active{background:var(--blue);color:white;}
+
+/* ── CARD ── */
+.card{
+  background:white;border-radius:var(--r);
+  padding:16px 20px;margin-bottom:14px;
+  box-shadow:var(--shadow);border:1px solid var(--g2);
+}
+.card-title{font-size:.92rem;font-weight:700;color:var(--blue);margin-bottom:12px;display:flex;align-items:center;gap:7px;}
+.badge{background:var(--accent);color:white;border-radius:20px;padding:2px 9px;font-size:.72rem;font-weight:700;}
+
+/* ── TEAMS ── */
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:10px;}
+.tcard{border:1.5px solid var(--g2);border-radius:8px;padding:11px 13px;background:white;transition:box-shadow .2s;}
+.tcard:hover{box-shadow:0 3px 10px rgba(0,0,0,.09);}
+.tcard.teacher{border-color:var(--accent-m);background:var(--accent-l);}
+.tname{font-weight:700;font-size:.88rem;color:var(--blue);margin-bottom:4px;display:flex;justify-content:space-between;align-items:flex-start;}
+.tcard-actions{display:flex;gap:5px;flex-shrink:0;}
+.btn-edit{background:none;border:1.5px solid var(--blue-m);color:var(--blue);padding:3px 8px;font-size:.73rem;border-radius:5px;cursor:pointer;font-weight:700;}
+.btn-edit:hover{background:var(--blue-l);}
+.plist{font-size:.78rem;list-style:none;}
+.plist li{padding:2px 0;border-bottom:1px solid var(--g2);}
+.plist li:last-child{border:none;}
+.pcls{color:var(--g4);font-size:.72rem;margin-left:4px;}
+
+/* ── FORMS ── */
+.frow{display:flex;gap:7px;margin-bottom:7px;flex-wrap:wrap;}
+.fg{display:flex;flex-direction:column;gap:3px;flex:1;min-width:120px;}
+.fg label{font-size:.76rem;font-weight:600;color:var(--g4);}
+.fg input,.fg select{border:1.5px solid var(--g3);border-radius:6px;padding:6px 9px;font-size:.86rem;background:white;transition:border-color .2s;}
+.fg input:focus,.fg select:focus{outline:none;border-color:var(--accent);}
+
+/* ── PLAYER ROWS ── */
+.pr{display:flex;gap:5px;margin-bottom:5px;align-items:center;}
+.pn{font-size:.73rem;color:var(--g4);width:14px;flex-shrink:0;font-weight:700;}
+.pr input{flex:2;padding:5px 7px;border:1.5px solid var(--g3);border-radius:6px;font-size:.82rem;}
+.pr input.pcls-in{flex:1.2;font-size:.8rem;}
+.pr input.plet-in{flex:0.5;max-width:52px;text-transform:uppercase;font-size:.82rem;text-align:center;}
+.pr input.pmat-in{flex:1.2;font-size:.8rem;}
+.pr-del{background:none;border:none;cursor:pointer;color:var(--g3);font-size:1rem;padding:0 2px;line-height:1;}
+.pr-del:hover{color:var(--red);}
+.pr-label{font-size:.71rem;color:var(--g4);min-width:56px;flex-shrink:0;}
+
+/* ── BUTTONS ── */
+.btn{padding:7px 14px;border-radius:6px;border:none;font-weight:700;font-size:.8rem;cursor:pointer;transition:filter .15s,transform .1s;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;}
+.btn:active{transform:scale(.97);}
+.bp{background:var(--accent);color:white;}.bp:hover{filter:brightness(1.08);}
+.bb{background:var(--blue);color:white;}.bb:hover{filter:brightness(1.15);}
+.bg{background:var(--green);color:white;}
+.bgh{background:none;color:var(--red);border:1.5px solid var(--red);padding:4px 7px;font-size:.73rem;}
+.bgh:hover{background:var(--red-l);}
+.bm{background:var(--g2);color:var(--g5);}
+.sm{padding:4px 9px;font-size:.76rem;}
+
+/* ── POOL TABLE ── */
+.pool-section{margin-bottom:20px;border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow);border:1px solid var(--g2);}
+.pool-title{font-size:.88rem;font-weight:700;color:white;background:var(--blue);padding:9px 15px;}
+table{width:100%;border-collapse:collapse;background:white;}
+th{background:var(--blue-l);color:var(--blue);padding:7px 11px;font-size:.78rem;text-align:left;}
+td{padding:7px 11px;font-size:.82rem;border-bottom:1px solid var(--g2);}
+tr:last-child td{border:none;}
+tr:hover td{background:var(--g1);}
+.r1 td:first-child{color:#8B6914;font-weight:700;}
+.r2 td:first-child{color:var(--accent);font-weight:700;}
+.r3 td:first-child{color:var(--g4);}
+.r4 td:first-child{color:var(--red);}
+
+/* ── MATCH ITEMS ── */
+.mi{display:flex;align-items:center;justify-content:space-between;padding:9px 13px;border-radius:7px;border:1.5px solid var(--g2);margin-bottom:6px;background:white;flex-wrap:wrap;gap:5px;}
+.mt{font-weight:700;font-size:.84rem;flex:1;min-width:130px;}
+.mv{color:var(--g4);font-size:.74rem;margin:0 3px;}
+.sd{font-size:1rem;font-weight:700;color:var(--green);min-width:54px;text-align:center;}
+.mi-done{background:var(--green-l);border-color:#A8D5B5;}
+.mi-pend{background:var(--accent-l);border-color:var(--accent-m);}
+
+/* ── STATUS ── */
+.st{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.7rem;font-weight:700;}
+.st-p{background:var(--accent-l);color:var(--accent);}
+.st-d{background:var(--green-l);color:var(--green);}
+.st-t{background:var(--g2);color:var(--g4);}
+
+/* ── BRACKET ── */
+.bracket-tree{display:flex;gap:0;overflow-x:auto;padding-bottom:16px;min-height:300px;}
+.bracket-round{display:flex;flex-direction:column;justify-content:space-around;min-width:165px;padding:0 8px;}
+.bracket-round-title{font-size:.7rem;font-weight:700;color:var(--g4);text-transform:uppercase;letter-spacing:.7px;text-align:center;margin-bottom:10px;padding-bottom:5px;border-bottom:2px solid var(--g2);}
+.bmatch{border:1.5px solid var(--g2);border-radius:8px;overflow:hidden;background:white;box-shadow:0 1px 6px rgba(0,0,0,.06);}
+.bteam{padding:8px 11px;font-size:.82rem;font-weight:600;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--g2);background:white;min-height:36px;}
+.bteam:last-of-type{border-bottom:none;}
+.bteam.win{background:var(--green-l);color:var(--green);}
+.bteam.los{background:var(--g1);color:var(--g4);font-weight:400;}
+.bteam.tbd{color:var(--g3);font-style:italic;font-weight:400;}
+.bscore{font-weight:700;font-size:.85rem;margin-left:8px;flex-shrink:0;}
+.bmatch-footer{padding:5px 10px;border-top:1px solid var(--g2);background:var(--g1);text-align:center;}
+@media(max-width:700px){.bracket-round{min-width:140px;}.bteam{font-size:.76rem;padding:6px 8px;}}
+
+/* ── MISC ── */
+.pb{height:5px;background:var(--g2);border-radius:3px;overflow:hidden;margin-top:4px;}
+.pf{height:100%;border-radius:3px;transition:width .4s;}
+.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:6px;}
+.sh h2{font-size:1rem;color:var(--blue);font-weight:700;}
+.empty{text-align:center;padding:30px;color:var(--g4);font-size:.86rem;background:white;border-radius:var(--r);border:1.5px dashed var(--g3);}
+.ei{font-size:2rem;margin-bottom:6px;}
+.cnote{background:var(--blue-l);border-left:4px solid var(--blue);border-radius:0 8px 8px 0;padding:10px 13px;font-size:.81rem;color:var(--blue);margin-bottom:12px;}
+.hi{padding:12px 15px;border-radius:8px;border:1px solid var(--g2);margin-bottom:7px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:box-shadow .2s;background:white;}
+.hi:hover{box-shadow:var(--shadow);}
+.hy{font-weight:700;color:var(--blue);}
+.hs{font-size:.78rem;color:var(--g4);}
+.moverlay{display:none;position:fixed;inset:0;background:rgba(26,58,92,.4);z-index:200;align-items:center;justify-content:center;}
+.moverlay.open{display:flex;}
+.modal{background:white;border-radius:14px;padding:24px;max-width:420px;width:90%;box-shadow:0 12px 36px rgba(0,0,0,.22);}
+.emodal{background:white;border-radius:14px;padding:24px;max-width:520px;width:94%;box-shadow:0 12px 36px rgba(0,0,0,.22);max-height:90vh;overflow-y:auto;}
+.mtitle{font-size:.96rem;font-weight:700;color:var(--blue);margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;}
+.mclose{background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--g4);}
+#toast{position:fixed;bottom:20px;right:20px;background:var(--g5);color:white;padding:10px 16px;border-radius:8px;font-size:.83rem;z-index:999;transform:translateY(60px);opacity:0;transition:all .3s;max-width:280px;}
+#toast.show{transform:translateY(0);opacity:1;}
+#toast.success{background:var(--green);}
+#toast.error{background:var(--red);}
+@media(max-width:600px){main{padding:12px 8px;}.mi{flex-direction:column;align-items:flex-start;}.sport-cards{grid-template-columns:1fr;}}
+</style>
+</head>
+<body class="sport-basket">
+
+<!-- HEADER -->
+<header>
+  <div class="hd-left">
+    <button class="sport-back" id="btnSportBack" onclick="goHome()" style="display:none">← Sports</button>
+    <span id="hd-sport-icon">🏆</span>
+    <h1>Tournois <em>EPS</em></h1>
+  </div>
+  <div class="hd-right">
+    <div class="hd-meta">
+      <span id="conn-dot" class="dot" style="background:#aaa"></span>
+      <span id="conn-txt">Connexion…</span>
+      <span id="year-display"></span>
+    </div>
+    <div class="hd-school">Collège Pasteur · Villemomble</div>
+  </div>
+</header>
+
+<!-- NAV (masquée sur l'accueil) -->
+<nav id="main-nav" style="display:none">
+  <button class="active" onclick="goNav('inscriptions')">📋 Inscriptions</button>
+  <button onclick="goNav('poules')">🏅 Poules</button>
+  <button onclick="goNav('tableau')">🏆 Tableau</button>
+  <button onclick="goNav('consolation')">🤝 Consolation</button>
+  <button onclick="goNav('palmares')">🥇 Palmarès</button>
+  <button onclick="goNav('historique')">📅 Historique</button>
+</nav>
+
+<!-- ACCUEIL CHOIX SPORT -->
+<div id="sport-home">
+  <div class="sport-home-title">🏆 Tournois EPS</div>
+  <div class="sport-home-sub">Collège Pasteur · Villemomble — Choisissez le tournoi à gérer</div>
+  <div class="sport-cards">
+    <div class="sport-card basket" onclick="selectSport('basket')">
+      <div class="sport-card-icon">🏀</div>
+      <div class="sport-card-name">Basket-ball</div>
+      <div class="sport-card-desc">Benjamins &amp; Minimes<br>8 équipes par catégorie</div>
+    </div>
+    <div class="sport-card foot" onclick="selectSport('foot')">
+      <div class="sport-card-icon">⚽</div>
+      <div class="sport-card-name">Football</div>
+      <div class="sport-card-desc">Équipes mixtes 6e→3e<br>8 équipes, 1 enseignant/équipe</div>
+    </div>
+  </div>
+</div>
+
+<!-- APP PRINCIPALE (masquée sur l'accueil) -->
+<main id="main-app" style="display:none">
+
+  <!-- YEAR BAR -->
+  <div class="ybar">
+    <label>📅 Édition :</label>
+    <select id="ySel" onchange="switchYear(this.value)"><option value="">-- Choisir --</option></select>
+    <input type="number" id="yNew" placeholder="2026" min="2020" max="2040" style="width:82px">
+    <button class="btn bp sm" onclick="createYear()">+ Nouvelle édition</button>
+    <button class="btn bb sm" onclick="generateTournament()" id="btnGen" style="display:none">⚙️ Générer</button>
+    <button class="btn bg sm" onclick="exportPDF()">📥 PDF</button>
+  </div>
+
+  <!-- INSCRIPTIONS -->
+  <div id="sec-inscriptions" class="section active">
+    <!-- Onglets catégories (basket seulement) -->
+    <div id="cat-tabs-wrap" class="ctabs">
+      <button class="ctab active" data-cat="benjamin" onclick="switchCat('benjamin')">🔶 Benjamins</button>
+      <button class="ctab" data-cat="minime" onclick="switchCat('minime')">🔷 Minimes</button>
+    </div>
+    <!-- Formulaire ajout équipe -->
+    <div class="card">
+      <div class="card-title">➕ Ajouter une équipe <span id="cbadge" class="badge">0/8</span></div>
+      <div class="frow">
+        <div class="fg"><label>Nom de l'équipe *</label><input type="text" id="tName" placeholder="Les Aigles"></div>
+        <!-- Catégorie visible basket uniquement -->
+        <div class="fg" style="max-width:115px" id="tCatWrap">
+          <label>Catégorie</label>
+          <select id="tCat"><option value="benjamin">Benjamins</option><option value="minime">Minimes</option></select>
+        </div>
+      </div>
+      <div style="margin-bottom:6px;font-size:.78rem;font-weight:600;color:var(--g4)" id="players-label">Joueurs</div>
+      <div id="pform"></div>
+      <div style="margin-top:4px" id="add-player-btn-wrap"><button class="btn bm sm" onclick="addPField()">+ Joueur</button></div>
+      <div style="margin-top:10px"><button class="btn bp" onclick="saveTeam()">✅ Enregistrer l'équipe</button></div>
+    </div>
+
+    <!-- Listes équipes BASKET -->
+    <div id="basket-teams-display">
+      <div id="disp-benjamin">
+        <div class="sh"><h2>🔶 Benjamins</h2>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span id="benLbl" style="font-size:.78rem;color:var(--g4)">0/8</span>
+            <div class="pb" style="width:110px"><div class="pf" id="benPb" style="width:0%;background:#E8601C"></div></div>
+          </div>
+        </div>
+        <div id="tl-benjamin" class="tgrid"><div class="empty"><div class="ei">🏀</div>Aucune équipe</div></div>
+      </div>
+      <div id="disp-minime" style="margin-top:20px">
+        <div class="sh"><h2>🔷 Minimes</h2>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span id="minLbl" style="font-size:.78rem;color:var(--g4)">0/8</span>
+            <div class="pb" style="width:110px"><div class="pf" id="minPb" style="width:0%;background:var(--blue)"></div></div>
+          </div>
+        </div>
+        <div id="tl-minime" class="tgrid"><div class="empty"><div class="ei">🏀</div>Aucune équipe</div></div>
+      </div>
+    </div>
+
+    <!-- Liste équipes FOOT -->
+    <div id="foot-teams-display" style="display:none">
+      <div class="sh"><h2>⚽ Équipes inscrites</h2>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span id="footLbl" style="font-size:.78rem;color:var(--g4)">0/8</span>
+          <div class="pb" style="width:110px"><div class="pf" id="footPb" style="width:0%;background:var(--green)"></div></div>
+        </div>
+      </div>
+      <div id="tl-foot" class="tgrid"><div class="empty"><div class="ei">⚽</div>Aucune équipe</div></div>
+    </div>
+  </div>
+
+  <!-- POULES -->
+  <div id="sec-poules" class="section">
+    <div id="cat-tabs-poules" class="ctabs">
+      <button class="ctab active" data-cat="benjamin" onclick="switchCat('benjamin')">🔶 Benjamins</button>
+      <button class="ctab" data-cat="minime" onclick="switchCat('minime')">🔷 Minimes</button>
+    </div>
+    <div id="pc"><div class="empty"><div class="ei">⚙️</div>Générez d'abord le tournoi</div></div>
+  </div>
+
+  <!-- TABLEAU -->
+  <div id="sec-tableau" class="section">
+    <div id="cat-tabs-tableau" class="ctabs">
+      <button class="ctab active" data-cat="benjamin" onclick="switchCat('benjamin')">🔶 Benjamins</button>
+      <button class="ctab" data-cat="minime" onclick="switchCat('minime')">🔷 Minimes</button>
+    </div>
+    <div id="tc"><div class="empty"><div class="ei">🏆</div>Disponible après la phase de poules</div></div>
+  </div>
+
+  <!-- CONSOLATION -->
+  <div id="sec-consolation" class="section">
+    <div class="cnote">ℹ️ Les équipes éliminées en quarts continuent de jouer si le créneau le permet.</div>
+    <div id="cat-tabs-consol" class="ctabs">
+      <button class="ctab active" data-cat="benjamin" onclick="switchCat('benjamin')">🔶 Benjamins</button>
+      <button class="ctab" data-cat="minime" onclick="switchCat('minime')">🔷 Minimes</button>
+    </div>
+    <div id="cc"><div class="empty"><div class="ei">🤝</div>Disponible après les quarts de finale</div></div>
+  </div>
+
+  <!-- PALMARES -->
+  <div id="sec-palmares" class="section">
+    <div class="sh"><h2>🥇 Palmarès</h2></div>
+    <div id="palc"><div class="empty"><div class="ei">🥇</div>Disponible en fin de tournoi</div></div>
+  </div>
+
+  <!-- HISTORIQUE -->
+  <div id="sec-historique" class="section">
+    <div class="sh"><h2>📅 Historique</h2></div>
+    <div id="hc"><div class="empty"><div class="ei">📅</div>Aucun historique</div></div>
+  </div>
+</main>
+
+<!-- MODAL SCORE -->
+<div class="moverlay" id="moverlay">
+  <div class="modal">
+    <div class="mtitle" id="score-modal-title">Saisie du score <button class="mclose" onclick="closeModal()">✕</button></div>
+    <div id="minfo" style="font-weight:700;color:var(--blue);margin-bottom:14px;font-size:.9rem"></div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div class="fg" style="flex:1">
+        <label id="lA" style="font-size:.78rem;font-weight:700;color:var(--accent)"></label>
+        <input type="number" id="sA" min="0" value="0" style="font-size:1.35rem;text-align:center;font-weight:700;border:2px solid var(--accent)">
+      </div>
+      <div style="font-size:1.3rem;font-weight:700;color:var(--g3);margin-top:17px">—</div>
+      <div class="fg" style="flex:1">
+        <label id="lB" style="font-size:.78rem;font-weight:700;color:var(--blue)"></label>
+        <input type="number" id="sB" min="0" value="0" style="font-size:1.35rem;text-align:center;font-weight:700;border:2px solid var(--blue)">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn bp" style="flex:1" onclick="saveScore()">✅ Valider</button>
+      <button class="btn bm" onclick="closeModal()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITION EQUIPE -->
+<div class="moverlay" id="eoverlay">
+  <div class="emodal">
+    <div class="mtitle">✏️ Modifier l'équipe <button class="mclose" onclick="closeEditModal()">✕</button></div>
+    <div class="frow" style="margin-bottom:10px">
+      <div class="fg"><label>Nom de l'équipe *</label><input type="text" id="eName" placeholder="Les Aigles"></div>
+    </div>
+    <div style="margin-bottom:6px;font-size:.78rem;font-weight:600;color:var(--g4)" id="edit-players-label">Joueurs</div>
+    <div id="epform"></div>
+    <div style="margin-top:4px" id="edit-add-player-wrap"><button class="btn bm sm" onclick="addEPField()">+ Joueur</button></div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn bp" style="flex:1" onclick="saveEditTeam()">✅ Enregistrer</button>
+      <button class="btn bm" onclick="closeEditModal()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+//  FIREBASE
+// ══════════════════════════════════════════════
+var firebaseConfig = {
+  apiKey:            "AIzaSyCEDnS6Ji8x5Agmq_zWCpa3aYiMUeI_rcg",
+  authDomain:        "tournoi-basket-pasteur.firebaseapp.com",
+  databaseURL:       "https://tournoi-basket-pasteur-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:         "tournoi-basket-pasteur",
+  storageBucket:     "tournoi-basket-pasteur.firebasestorage.app",
+  messagingSenderId: "663931206812",
+  appId:             "1:663931206812:web:71489cb9ba386a5d998159"
+};
+firebase.initializeApp(firebaseConfig);
+var db = firebase.database();
+
+db.ref('.info/connected').on('value', function(snap) {
+  var ok = snap.val();
+  var dot = document.getElementById('conn-dot');
+  var txt = document.getElementById('conn-txt');
+  if (!dot) return;
+  dot.style.background = ok ? '#4ade80' : '#f87171';
+  dot.style.animation  = ok ? 'blink 1.6s infinite' : 'none';
+  txt.textContent = ok ? 'Connecté' : 'Hors ligne ⚠️';
+});
+
+// ══════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════
+var currentSport = null;   // 'basket' | 'foot'
+var currentYear  = null;
+var currentCat   = 'benjamin';  // basket: benjamin|minime  /  foot: foot
+var currentSec   = 'inscriptions';
+var appData      = {};
+var modalCtx     = null;
+var editCtx      = null;
+var yearListener = null;
+
+// Config par sport
+var SPORTS = {
+  basket: {
+    label:     'Basket-ball',
+    icon:      '🏀',
+    cats:      ['benjamin','minime'],
+    maxTeams:  8,
+    maxPlayers:6,
+    dbKey:     'basket'
+  },
+  foot: {
+    label:     'Football',
+    icon:      '⚽',
+    cats:      ['foot'],
+    maxTeams:  8,
+    maxPlayers:5,   // 4 élèves (6e,5e,4e,3e) + 1 enseignant
+    dbKey:     'foot'
+  }
+};
+
+// Niveaux foot : 4 élèves par niveau + 1 enseignant
+var FOOT_SLOTS = [
+  { label: '6ème', key: 'cl6', type: 'eleve' },
+  { label: '5ème', key: 'cl5', type: 'eleve' },
+  { label: '4ème', key: 'cl4', type: 'eleve' },
+  { label: '3ème', key: 'cl3', type: 'eleve' },
+  { label: 'Enseignant', key: 'ens', type: 'teacher' }
+];
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('yNew').value = new Date().getFullYear();
+  document.getElementById('moverlay').addEventListener('click', function(e){ if(e.target.id==='moverlay') closeModal(); });
+  document.getElementById('eoverlay').addEventListener('click', function(e){ if(e.target.id==='eoverlay') closeEditModal(); });
+  document.getElementById('tCat').addEventListener('change', function(){ currentCat=this.value; updateBadge(); });
+  loadAllHistorique();
+});
+
+// ══════════════════════════════════════════════
+//  ACCUEIL / SÉLECTION SPORT
+// ══════════════════════════════════════════════
+function goHome() {
+  currentSport = null; currentYear = null; appData = {};
+  if (yearListener) { db.ref('tournaments').off(); yearListener = null; }
+  document.getElementById('sport-home').style.display = '';
+  document.getElementById('main-app').style.display = 'none';
+  document.getElementById('main-nav').style.display = 'none';
+  document.getElementById('btnSportBack').style.display = 'none';
+  document.getElementById('hd-sport-icon').textContent = '🏆';
+  document.getElementById('year-display').textContent = '';
+  document.getElementById('btnGen').style.display = 'none';
+  loadAllHistorique();
+}
+
+function selectSport(sport) {
+  currentSport = sport;
+  var cfg = SPORTS[sport];
+  // Apparence
+  document.body.className = 'sport-' + sport;
+  document.getElementById('hd-sport-icon').textContent = cfg.icon;
+  document.getElementById('sport-home').style.display = 'none';
+  document.getElementById('main-app').style.display = '';
+  document.getElementById('main-nav').style.display = 'flex';
+  document.getElementById('btnSportBack').style.display = 'inline-flex';
+  document.getElementById('score-modal-title').innerHTML = cfg.icon + ' Saisie du score <button class="mclose" onclick="closeModal()">✕</button>';
+
+  // Onglets catégories : visible si basket, caché si foot
+  var isBasket = (sport === 'basket');
+  var catTabsIds = ['cat-tabs-wrap','cat-tabs-poules','cat-tabs-tableau','cat-tabs-consol'];
+  catTabsIds.forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.style.display = isBasket ? 'flex' : 'none';
+  });
+  document.getElementById('tCatWrap').style.display = isBasket ? '' : 'none';
+  document.getElementById('basket-teams-display').style.display = isBasket ? '' : 'none';
+  document.getElementById('foot-teams-display').style.display = isBasket ? 'none' : '';
+
+  // Mode foot : catégorie unique
+  if (!isBasket) {
+    currentCat = 'foot';
+    document.getElementById('add-player-btn-wrap').style.display = 'none';
+    document.getElementById('edit-add-player-wrap').style.display = 'none';
+  } else {
+    currentCat = 'benjamin';
+    document.getElementById('add-player-btn-wrap').style.display = '';
+    document.getElementById('edit-add-player-wrap').style.display = '';
+  }
+
+  // Reconstruire le formulaire joueurs
+  initPForm();
+  loadYears();
+  goNav('inscriptions');
+}
+
+// ══════════════════════════════════════════════
+//  NAVIGATION ONGLETS
+// ══════════════════════════════════════════════
+function goNav(name) {
+  document.querySelectorAll('.section').forEach(function(s){ s.classList.remove('active'); });
+  document.querySelectorAll('#main-nav button').forEach(function(b){ b.classList.remove('active'); });
+  document.getElementById('sec-' + name).classList.add('active');
+  var keys = ['inscriptions','poules','tableau','consolation','palmares','historique'];
+  var btn = document.querySelectorAll('#main-nav button')[keys.indexOf(name)];
+  if (btn) btn.classList.add('active');
+  currentSec = name;
+  render();
+}
+
+function switchCat(c) {
+  currentCat = c;
+  // Mettre à jour tous les groupes d'onglets
+  document.querySelectorAll('.ctab').forEach(function(t){ t.classList.toggle('active', t.dataset.cat === c); });
+  if (document.getElementById('tCat')) document.getElementById('tCat').value = c;
+  updateBadge();
+  render();
+}
+
+function render() {
+  if (currentSec === 'inscriptions')  renderTeams();
+  if (currentSec === 'poules')        renderPoules();
+  if (currentSec === 'tableau')       renderTableau();
+  if (currentSec === 'consolation')   renderConsolation();
+  if (currentSec === 'palmares')      renderPalmares();
+}
+
+// ══════════════════════════════════════════════
+//  YEARS
+// ══════════════════════════════════════════════
+function loadYears() {
+  var path = 'tournaments/' + currentSport;
+  db.ref(path).off();
+  db.ref(path).on('value', function(snap) {
+    var all = snap.val() || {};
+    var years = Object.keys(all).sort(function(a,b){return b-a;});
+    var sel = document.getElementById('ySel');
+    var prev = sel.value;
+    sel.innerHTML = '<option value="">-- Choisir --</option>';
+    years.forEach(function(y){
+      var o = document.createElement('option');
+      o.value = y; o.textContent = 'Édition ' + y; sel.appendChild(o);
+    });
+    if (prev && years.indexOf(prev) !== -1) sel.value = prev;
+    renderHistoFromData(all);
+  });
+}
+
+function createYear() {
+  var y = document.getElementById('yNew').value;
+  if (!y) return toast('Entrez une année', 'error');
+  db.ref('tournaments/' + currentSport + '/' + y + '/meta')
+    .set({year:+y, sport:currentSport, createdAt:Date.now(), status:'registration'})
+    .then(function(){ document.getElementById('ySel').value=y; switchYear(y); toast('Édition '+y+' créée !','success'); })
+    .catch(function(err){ toast('❌ '+err.message,'error'); });
+}
+
+function switchYear(y) {
+  currentYear = y;
+  document.getElementById('year-display').textContent = y ? '· '+y : '';
+  document.getElementById('btnGen').style.display = y ? 'inline-flex' : 'none';
+  if (!y) { appData={}; return; }
+  db.ref('tournaments/' + currentSport + '/' + y).on('value', function(snap){
+    appData = snap.val() || {};
+    render(); updateBadge();
+  });
+}
+
+function loadAllHistorique() {
+  // Pour l'écran d'accueil : on ne fait rien ici, géré par loadYears par sport
+}
+
+// ══════════════════════════════════════════════
+//  TEAMS — FORMULAIRE
+// ══════════════════════════════════════════════
+function initPForm() {
+  var d = document.getElementById('pform');
+  if (!d) return;
+  d.innerHTML = '';
+  if (currentSport === 'foot') {
+    initFootForm(d);
+    document.getElementById('players-label').textContent = 'Composition de l\'équipe (fixe)';
+  } else {
+    document.getElementById('players-label').innerHTML = 'Joueurs <span style="color:var(--g3)">(max 6 — prénom/nom + classe)</span>';
+    for (var i=1; i<=3; i++) addPTo(d, i);
+  }
+}
+
+function initFootForm(container) {
+  FOOT_SLOTS.forEach(function(slot, idx) {
+    var row = document.createElement('div');
+    row.className = 'pr';
+    row.dataset.slotKey = slot.key;
+    if (slot.type === 'eleve') {
+      // Prénom NOM + lettre de classe
+      row.innerHTML = '<span class="pr-label">'+slot.label+' :</span>'
+        + '<input type="text" placeholder="Prénom NOM" class="pr-name" style="flex:2">'
+        + '<input type="text" placeholder="Lettre" class="plet-in" maxlength="2" title="Ex: A, B, C…">';
+    } else {
+      // Enseignant : nom + matière
+      row.innerHTML = '<span class="pr-label">'+slot.label+' :</span>'
+        + '<input type="text" placeholder="Prénom NOM" class="pr-name" style="flex:2">'
+        + '<input type="text" placeholder="Matière" class="pmat-in">';
+    }
+    container.appendChild(row);
+  });
+}
+
+function addPField() {
+  if (currentSport === 'foot') return; // foot = slots fixes
+  var d = document.getElementById('pform');
+  var n = d.querySelectorAll('.pr').length + 1;
+  if (n > 6) return toast('Maximum 6 joueurs','error');
+  addPTo(d, n);
+}
+
+function addPTo(d, n) {
+  var r = document.createElement('div'); r.className = 'pr';
+  r.innerHTML = '<span class="pn">'+n+'.</span>'
+    + '<input type="text" placeholder="Prénom NOM" class="pr-name">'
+    + '<input type="text" placeholder="Classe" class="pcls-in" style="max-width:90px">'
+    + '<button class="pr-del" onclick="this.parentNode.remove()" title="Supprimer">×</button>';
+  d.appendChild(r);
+}
+
+function collectPlayers(formId) {
+  // Retourne tableau de joueurs selon le sport
+  var players = [];
+  if (currentSport === 'foot') {
+    FOOT_SLOTS.forEach(function(slot) {
+      var row = document.querySelector('#'+formId+' [data-slot-key="'+slot.key+'"]');
+      if (!row) return;
+      var nm = row.querySelector('.pr-name').value.trim();
+      if (slot.type === 'eleve') {
+        var letter = row.querySelector('.plet-in').value.trim().toUpperCase();
+        players.push({ name:nm, cls: slot.label + (letter?' '+letter:''), type:'eleve', slotKey:slot.key });
+      } else {
+        var mat = row.querySelector('.pmat-in').value.trim();
+        players.push({ name:nm, cls: mat, type:'teacher', slotKey:slot.key });
+      }
+    });
+  } else {
+    document.querySelectorAll('#'+formId+' .pr').forEach(function(row){
+      var nm = row.querySelector('.pr-name').value.trim();
+      var cl = row.querySelector('.pcls-in') ? row.querySelector('.pcls-in').value.trim() : '';
+      if (nm) players.push({ name:nm, cls:cl, type:'eleve' });
+    });
+  }
+  return players;
+}
+
+// ══════════════════════════════════════════════
+//  TEAMS — SAVE / DELETE / RENDER
+// ══════════════════════════════════════════════
+function getTeams(cat) {
+  if (currentSport === 'foot') return Object.values((appData.teams)||{});
+  return Object.values(((appData.teams)||{})[cat]||{});
+}
+
+function updateBadge() {
+  var teams = getTeams(currentCat);
+  var max   = SPORTS[currentSport] ? SPORTS[currentSport].maxTeams : 8;
+  var el    = document.getElementById('cbadge');
+  if (el) el.textContent = teams.length + '/' + max;
+}
+
+function saveTeam() {
+  if (!currentYear) return toast('Sélectionnez une édition','error');
+  var name = document.getElementById('tName').value.trim();
+  var cat  = currentSport === 'foot' ? 'foot' : document.getElementById('tCat').value;
+  if (!name) return toast('Nom requis','error');
+  if (getTeams(cat).length >= SPORTS[currentSport].maxTeams) return toast('Maximum '+SPORTS[currentSport].maxTeams+' équipes','error');
+  var players = collectPlayers('pform');
+  var basePath = currentSport === 'foot'
+    ? 'tournaments/'+currentSport+'/'+currentYear+'/teams'
+    : 'tournaments/'+currentSport+'/'+currentYear+'/teams/'+cat;
+  var ref = db.ref(basePath).push();
+  ref.set({ id:ref.key, name:name, cat:cat, sport:currentSport, players:players, createdAt:Date.now() })
+    .then(function(){
+      document.getElementById('tName').value = '';
+      initPForm();
+      toast('"'+name+'" ajoutée !','success');
+    })
+    .catch(function(err){ toast('❌ '+err.message,'error'); });
+}
+
+function deleteTeam(cat, id) {
+  if (!confirm('Supprimer cette équipe ?')) return;
+  var basePath = currentSport === 'foot'
+    ? 'tournaments/'+currentSport+'/'+currentYear+'/teams/'+id
+    : 'tournaments/'+currentSport+'/'+currentYear+'/teams/'+cat+'/'+id;
+  db.ref(basePath).remove().then(function(){ toast('Équipe supprimée'); }).catch(function(err){ toast('❌ '+err.message,'error'); });
+}
+
+function renderTeams() {
+  if (currentSport === 'foot') {
+    renderFootTeams();
+  } else {
+    renderBasketTeams();
+  }
+  updateBadge();
+}
+
+function renderBasketTeams() {
+  ['benjamin','minime'].forEach(function(c){
+    var teams = getTeams(c);
+    var pct   = Math.round(teams.length/8*100);
+    var pfx   = c==='benjamin'?'ben':'min';
+    document.getElementById(pfx+'Pb').style.width = pct+'%';
+    document.getElementById(pfx+'Lbl').textContent = teams.length+'/8';
+    var el = document.getElementById('tl-'+c);
+    if (!teams.length){ el.innerHTML='<div class="empty"><div class="ei">🏀</div>Aucune équipe</div>'; return; }
+    el.innerHTML = teams.map(function(t){ return teamCardHTML(t, c); }).join('');
+  });
+}
+
+function renderFootTeams() {
+  var teams = getTeams('foot');
+  var pct   = Math.round(teams.length/8*100);
+  document.getElementById('footPb').style.width = pct+'%';
+  document.getElementById('footLbl').textContent = teams.length+'/8';
+  var el = document.getElementById('tl-foot');
+  if (!teams.length){ el.innerHTML='<div class="empty"><div class="ei">⚽</div>Aucune équipe</div>'; return; }
+  el.innerHTML = teams.map(function(t){ return teamCardHTML(t, 'foot'); }).join('');
+}
+
+function teamCardHTML(t, cat) {
+  var phtml = '';
+  if (t.players && t.players.length) {
+    phtml = t.players.map(function(p){
+      var nm = typeof p==='object' ? p.name : p;
+      var cl = typeof p==='object' && p.cls ? p.cls : '';
+      var isTeacher = typeof p==='object' && p.type==='teacher';
+      return '<li>'+(isTeacher?'👨‍🏫 ':'')+nm+(cl?'<span class="pcls"> · '+cl+'</span>':'')+'</li>';
+    }).join('');
+  } else {
+    phtml = '<li style="color:var(--g4);font-style:italic">Non renseignés</li>';
+  }
+  return '<div class="tcard">'
+    +'<div class="tname">'+t.name
+    +'<div class="tcard-actions">'
+    +'<button class="btn-edit" onclick="openEditModal(\''+cat+'\',\''+t.id+'\')">✏️</button>'
+    +'<button class="btn bgh sm" onclick="deleteTeam(\''+cat+'\',\''+t.id+'\')">✕</button>'
+    +'</div></div>'
+    +'<div style="font-size:.72rem;color:var(--g4);margin-bottom:4px"><span class="st st-d">Inscrit</span></div>'
+    +'<ul class="plist">'+phtml+'</ul></div>';
+}
+
+// ══════════════════════════════════════════════
+//  EDIT TEAM MODAL
+// ══════════════════════════════════════════════
+function openEditModal(cat, id) {
+  var teams = getTeams(cat);
+  var team  = null;
+  teams.forEach(function(t){ if(t.id===id) team=t; });
+  if (!team) return;
+  editCtx = { cat:cat, id:id };
+  document.getElementById('eName').value = team.name||'';
+  var epform = document.getElementById('epform');
+  epform.innerHTML = '';
+  if (currentSport === 'foot') {
+    document.getElementById('edit-players-label').textContent = 'Composition de l\'équipe';
+    initFootEditForm(epform, team.players||[]);
+  } else {
+    document.getElementById('edit-players-label').innerHTML = 'Joueurs <span style="color:var(--g3)">(max 6)</span>';
+    var players = team.players||[];
+    if (!players.length){ for(var i=1;i<=3;i++) addEPTo(epform,i,'',''); }
+    else players.forEach(function(p,idx){
+      var nm=typeof p==='object'?p.name:p, cl=typeof p==='object'&&p.cls?p.cls:'';
+      addEPTo(epform,idx+1,nm,cl);
+    });
+  }
+  document.getElementById('eoverlay').classList.add('open');
+  setTimeout(function(){ document.getElementById('eName').focus(); },80);
+}
+
+function initFootEditForm(container, existingPlayers) {
+  FOOT_SLOTS.forEach(function(slot){
+    var existing = null;
+    existingPlayers.forEach(function(p){ if(typeof p==='object' && p.slotKey===slot.key) existing=p; });
+    var row = document.createElement('div');
+    row.className = 'pr'; row.dataset.slotKey = slot.key;
+    var nm = existing ? existing.name : '';
+    if (slot.type === 'eleve') {
+      var letterVal = '';
+      if (existing && existing.cls) {
+        var parts = existing.cls.split(' ');
+        letterVal = parts.length > 1 ? parts[parts.length-1] : '';
+      }
+      row.innerHTML = '<span class="pr-label">'+slot.label+' :</span>'
+        +'<input type="text" placeholder="Prénom NOM" class="pr-name" style="flex:2" value="'+nm.replace(/"/g,'&quot;')+'">'
+        +'<input type="text" placeholder="Lettre" class="plet-in" maxlength="2" value="'+letterVal.replace(/"/g,'&quot;')+'">';
+    } else {
+      var mat = existing && existing.cls ? existing.cls : '';
+      row.innerHTML = '<span class="pr-label">'+slot.label+' :</span>'
+        +'<input type="text" placeholder="Prénom NOM" class="pr-name" style="flex:2" value="'+nm.replace(/"/g,'&quot;')+'">'
+        +'<input type="text" placeholder="Matière" class="pmat-in" value="'+mat.replace(/"/g,'&quot;')+'">';
+    }
+    container.appendChild(row);
+  });
+}
+
+function addEPField() {
+  if (currentSport === 'foot') return;
+  var epform = document.getElementById('epform');
+  var n = epform.querySelectorAll('.pr').length+1;
+  if (n>6) return toast('Maximum 6 joueurs','error');
+  addEPTo(epform,n,'','');
+}
+
+function addEPTo(d,n,nm,cl){
+  var r=document.createElement('div'); r.className='pr';
+  r.innerHTML='<span class="pn">'+n+'.</span>'
+    +'<input type="text" placeholder="Prénom NOM" class="pr-name" value="'+nm.replace(/"/g,'&quot;')+'">'
+    +'<input type="text" placeholder="Classe" class="pcls-in" style="max-width:90px" value="'+cl.replace(/"/g,'&quot;')+'">'
+    +'<button class="pr-del" onclick="this.parentNode.remove()" title="Supprimer">×</button>';
+  d.appendChild(r);
+}
+
+function closeEditModal(){ document.getElementById('eoverlay').classList.remove('open'); editCtx=null; }
+
+function saveEditTeam(){
+  if (!editCtx||!currentYear) return;
+  var name=document.getElementById('eName').value.trim();
+  if (!name) return toast('Nom requis','error');
+  var players=collectPlayersFromForm('epform');
+  var basePath = currentSport==='foot'
+    ? 'tournaments/'+currentSport+'/'+currentYear+'/teams/'+editCtx.id
+    : 'tournaments/'+currentSport+'/'+currentYear+'/teams/'+editCtx.cat+'/'+editCtx.id;
+  db.ref(basePath).update({name:name,players:players})
+    .then(function(){ toast('"'+name+'" mis à jour !','success'); closeEditModal(); })
+    .catch(function(err){ toast('❌ '+err.message,'error'); });
+}
+
+function collectPlayersFromForm(formId){
+  var players=[];
+  if (currentSport==='foot'){
+    FOOT_SLOTS.forEach(function(slot){
+      var row=document.querySelector('#'+formId+' [data-slot-key="'+slot.key+'"]');
+      if (!row) return;
+      var nm=row.querySelector('.pr-name').value.trim();
+      if (slot.type==='eleve'){
+        var letter=row.querySelector('.plet-in').value.trim().toUpperCase();
+        players.push({name:nm,cls:slot.label+(letter?' '+letter:''),type:'eleve',slotKey:slot.key});
+      } else {
+        var mat=row.querySelector('.pmat-in').value.trim();
+        players.push({name:nm,cls:mat,type:'teacher',slotKey:slot.key});
+      }
+    });
+  } else {
+    document.querySelectorAll('#'+formId+' .pr').forEach(function(row){
+      var nm=row.querySelector('.pr-name').value.trim();
+      var cl=row.querySelector('.pcls-in')?row.querySelector('.pcls-in').value.trim():'';
+      if (nm) players.push({name:nm,cls:cl,type:'eleve'});
+    });
+  }
+  return players;
+}
+
+// ══════════════════════════════════════════════
+//  GENERATE TOURNAMENT
+// ══════════════════════════════════════════════
+function generateTournament(){
+  if (!currentYear) return toast('Sélectionnez une édition','error');
+  if (currentSport==='foot'){
+    var teams=getTeams('foot');
+    if (teams.length<4) return toast('Min 4 équipes pour générer','error');
+    if (!confirm('Générer le tournoi foot ?')) return;
+    var shuffled=teams.slice().sort(function(){return Math.random()-.5;});
+    var h=Math.ceil(shuffled.length/2);
+    db.ref('tournaments/foot/'+currentYear+'/pools').set({
+      A:{teams:shuffled.slice(0,h).map(function(t){return t.id;}),matches:rrMatchesFoot(shuffled.slice(0,h),'A')},
+      B:{teams:shuffled.slice(h).map(function(t){return t.id;}),matches:rrMatchesFoot(shuffled.slice(h),'B')}
+    }).catch(function(err){toast('❌ '+err.message,'error');});
+    db.ref('tournaments/foot/'+currentYear+'/bracket').set({qf:{},sf:{},final:{},thirdPlace:{}});
+    toast('Tournoi foot généré !','success'); goNav('poules');
+  } else {
+    var benTeams=getTeams('benjamin'), minTeams=getTeams('minime');
+    if (benTeams.length<4) return toast('Min 4 équipes benjamins','error');
+    if (minTeams.length<4) return toast('Min 4 équipes minimes','error');
+    if (!confirm('Générer le tournoi basket ?')) return;
+    ['benjamin','minime'].forEach(function(c){
+      var t=getTeams(c).slice().sort(function(){return Math.random()-.5;});
+      var h=Math.ceil(t.length/2);
+      db.ref('tournaments/basket/'+currentYear+'/pools/'+c).set({
+        A:{teams:t.slice(0,h).map(function(x){return x.id;}),matches:rrMatches(t.slice(0,h),c,'A')},
+        B:{teams:t.slice(h).map(function(x){return x.id;}),matches:rrMatches(t.slice(h),c,'B')}
+      }).catch(function(err){toast('❌ '+err.message,'error');});
+      db.ref('tournaments/basket/'+currentYear+'/bracket/'+c).set({qf:{},sf:{},final:{},thirdPlace:{}});
+    });
+    toast('Tournoi basket généré !','success'); goNav('poules');
+  }
+}
+
+function rrMatchesFoot(teams, pool){
+  return rrMatchesGeneric(teams,'foot',pool);
+}
+
+// Algorithme du cercle — commun basket & foot
+function rrMatches(teams, c, pool){ return rrMatchesGeneric(teams,c,pool); }
+
+function rrMatchesGeneric(teams, c, pool){
+  var t=teams.slice();
+  if (t.length%2===1) t.push(null);
+  var n=t.length, fixed=t[0], rotating=t.slice(1), rounds=[];
+  for (var r=0;r<n-1;r++){
+    var circle=[fixed].concat(rotating), pairs=[];
+    for (var i=0;i<n/2;i++){
+      var a=circle[i],b=circle[n-1-i];
+      if (a&&b) pairs.push([a,b]);
+    }
+    rounds.push(pairs);
+    rotating=[rotating[rotating.length-1]].concat(rotating.slice(0,rotating.length-1));
+  }
+  var scheduled=[];
+  for (var ri=0;ri<rounds.length;ri++) for (var mi=0;mi<rounds[ri].length;mi++) scheduled.push(rounds[ri][mi]);
+  var result={};
+  for (var j=0;j<scheduled.length;j++){
+    var k='m'+j;
+    result[k]={id:k,cat:c,pool:pool,teamA:scheduled[j][0].id||scheduled[j][0],teamB:scheduled[j][1].id||scheduled[j][1],scoreA:null,scoreB:null,done:false,order:j};
+  }
+  return result;
+}
+
+// ══════════════════════════════════════════════
+//  STANDINGS
+// ══════════════════════════════════════════════
+function standings(ids,matches,tmap){
+  var s={};
+  ids.forEach(function(id){ s[id]={id:id,name:(tmap[id]||{}).name||id,played:0,wins:0,losses:0,points:0,scored:0,conceded:0,diff:0}; });
+  Object.values(matches).forEach(function(m){
+    if (!m.done) return;
+    var a=s[m.teamA],b=s[m.teamB]; if (!a||!b) return;
+    a.played++;b.played++;a.scored+=m.scoreA;a.conceded+=m.scoreB;b.scored+=m.scoreB;b.conceded+=m.scoreA;
+    a.diff=a.scored-a.conceded;b.diff=b.scored-b.conceded;
+    if (m.scoreA>m.scoreB){a.wins++;a.points+=2;b.losses++;b.points+=1;}
+    else if (m.scoreB>m.scoreA){b.wins++;b.points+=2;a.losses++;a.points+=1;}
+    else{a.points+=1;b.points+=1;}
+  });
+  return Object.values(s).sort(function(a,b){return b.points-a.points||b.diff-a.diff||b.scored-a.scored;});
+}
+
+// ══════════════════════════════════════════════
+//  POULES
+// ══════════════════════════════════════════════
+function renderPoules(){
+  var el=document.getElementById('pc');
+  // Pour le foot, une seule catégorie "foot"
+  var pools;
+  if (currentSport==='foot'){
+    pools=(appData.pools)||null;
+    if (!pools){el.innerHTML='<div class="empty"><div class="ei">⚙️</div>Générez d\'abord le tournoi</div>';return;}
+  } else {
+    pools=((appData.pools)||{})[currentCat];
+    if (!pools){el.innerHTML='<div class="empty"><div class="ei">⚙️</div>Générez d\'abord le tournoi</div>';return;}
+  }
+  var allTeams=currentSport==='foot'?getTeams('foot'):getTeams(currentCat);
+  var tmap=Object.fromEntries(allTeams.map(function(t){return [t.id,t];}));
+  var html='';
+  ['A','B'].forEach(function(pool){
+    var p=pools[pool]; if (!p) return;
+    var st=standings(p.teams||[],p.matches||{},tmap);
+    html+='<div class="pool-section">'
+      +'<div class="pool-title">Poule '+pool+(currentSport==='basket'?' — '+(currentCat==='benjamin'?'Benjamins':'Minimes'):'')+'</div>'
+      +'<table><thead><tr><th>#</th><th>Équipe</th><th>J</th><th>V</th><th>D</th><th>Pts</th><th>+/-</th></tr></thead><tbody>'
+      +st.map(function(s,i){return '<tr class="r'+(i+1)+'"><td>'+(i+1)+'</td><td><strong>'+s.name+'</strong></td><td>'+s.played+'</td><td>'+s.wins+'</td><td>'+s.losses+'</td><td><strong>'+s.points+'</strong></td><td>'+(s.diff>=0?'+':'')+s.diff+'</td></tr>';}).join('')
+      +'</tbody></table>'
+      +'<div style="padding:12px"><div style="font-weight:700;color:var(--blue);margin-bottom:7px;font-size:.83rem">Matchs</div>'
+      +Object.values(p.matches||{}).sort(function(a,b){return (a.order||0)-(b.order||0);}).map(function(m){
+        var pref=currentSport==='foot'?'pools/'+pool+'/matches/':'pools/'+currentCat+'/'+pool+'/matches/';
+        return matchItem(m,tmap,pref+m.id);
+      }).join('')
+      +'</div></div>';
+  });
+  el.innerHTML=html;
+  // Auto-génération QF
+  if (currentSport==='foot') tryGenQFFoot(pools,allTeams);
+  else tryGenQF(currentCat);
+}
+
+// ══════════════════════════════════════════════
+//  MATCH ITEM
+// ══════════════════════════════════════════════
+function esc(s){return (s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
+
+function matchItem(m,tmap,path){
+  var nA=(tmap[m.teamA]||{}).name||m.teamA||'TBD';
+  var nB=(tmap[m.teamB]||{}).name||m.teamB||'TBD';
+  var ea=esc(nA),eb=esc(nB);
+  if (m.done) return '<div class="mi mi-done"><span class="mt">'+nA+'</span><span class="sd">'+m.scoreA+' — '+m.scoreB+'</span><span class="mt" style="text-align:right">'+nB+'</span><button class="btn bgh sm" onclick="openModal(\''+path+'\',\''+ea+'\',\''+eb+'\','+m.scoreA+','+m.scoreB+')">✏️ Modifier</button></div>';
+  if (!m.teamA||!m.teamB) return '<div class="mi" style="opacity:.55"><span class="mt">'+nA+' <span class="mv">vs</span> '+nB+'</span><span class="st st-t">En attente</span></div>';
+  return '<div class="mi mi-pend"><span class="mt">'+nA+' <span class="mv">vs</span> '+nB+'</span><span class="st st-p">À jouer</span><button class="btn bp sm" onclick="openModal(\''+path+'\',\''+ea+'\',\''+eb+'\')">📝 Score</button></div>';
+}
+
+// ══════════════════════════════════════════════
+//  SCORE MODAL
+// ══════════════════════════════════════════════
+function openModal(path,nA,nB,sA,sB){
+  modalCtx={path:path,nA:nA,nB:nB};
+  document.getElementById('minfo').textContent=nA+'  vs  '+nB;
+  document.getElementById('lA').textContent=nA;
+  document.getElementById('lB').textContent=nB;
+  document.getElementById('sA').value=(sA!=null&&sA!=='')?sA:0;
+  document.getElementById('sB').value=(sB!=null&&sB!=='')?sB:0;
+  document.getElementById('moverlay').classList.add('open');
+  setTimeout(function(){document.getElementById('sA').focus();},80);
+}
+function closeModal(){document.getElementById('moverlay').classList.remove('open');modalCtx=null;}
+
+function saveScore(){
+  if (!modalCtx) return;
+  if (!currentYear) return toast('Aucune édition sélectionnée','error');
+  var vA=parseInt(document.getElementById('sA').value)||0;
+  var vB=parseInt(document.getElementById('sB').value)||0;
+  var path=modalCtx.path;
+  closeModal(); toast('Enregistrement…','');
+  var basePath=currentSport==='foot'
+    ?'tournaments/foot/'+currentYear+'/'
+    :'tournaments/basket/'+currentYear+'/';
+  db.ref(basePath+path).update({scoreA:vA,scoreB:vB,done:true})
+    .then(function(){toast('✅ Score : '+vA+' — '+vB,'success');})
+    .catch(function(err){toast('❌ '+err.message,'error');});
+}
+
+// ══════════════════════════════════════════════
+//  AUTO-ADVANCE — BASKET
+// ══════════════════════════════════════════════
+function tryGenQF(c){
+  var pools=((appData.pools)||{})[c]; if (!pools) return;
+  var allTeams=getTeams(c);
+  var tmap=Object.fromEntries(allTeams.map(function(t){return[t.id,t];}));
+  var allDone=true;
+  ['A','B'].forEach(function(p){Object.values(((pools[p]||{}).matches)||{}).forEach(function(m){if(!m.done)allDone=false;});});
+  if (!allDone) return;
+  var ex=((appData.bracket)||{})[c];
+  if (ex&&ex.qf&&Object.keys(ex.qf).length>0) return;
+  var sA=standings(pools.A.teams||[],pools.A.matches||{},tmap);
+  var sB=standings(pools.B.teams||[],pools.B.matches||{},tmap);
+  db.ref('tournaments/basket/'+currentYear+'/bracket/'+c+'/qf').set({
+    qf1:{id:'qf1',cat:c,label:'QF1',teamA:(sA[0]||{}).id,teamB:(sB[3]||{}).id,scoreA:null,scoreB:null,done:false},
+    qf2:{id:'qf2',cat:c,label:'QF2',teamA:(sB[1]||{}).id,teamB:(sA[2]||{}).id,scoreA:null,scoreB:null,done:false},
+    qf3:{id:'qf3',cat:c,label:'QF3',teamA:(sB[0]||{}).id,teamB:(sA[3]||{}).id,scoreA:null,scoreB:null,done:false},
+    qf4:{id:'qf4',cat:c,label:'QF4',teamA:(sA[1]||{}).id,teamB:(sB[2]||{}).id,scoreA:null,scoreB:null,done:false}
+  }).then(function(){toast('QF générés !','success');}).catch(function(err){toast('❌ '+err.message,'error');});
+}
+
+// ══════════════════════════════════════════════
+//  AUTO-ADVANCE — FOOT (une seule catégorie)
+// ══════════════════════════════════════════════
+function tryGenQFFoot(pools,allTeams){
+  if (!pools) return;
+  var tmap=Object.fromEntries(allTeams.map(function(t){return[t.id,t];}));
+  var allDone=true;
+  ['A','B'].forEach(function(p){Object.values(((pools[p]||{}).matches)||{}).forEach(function(m){if(!m.done)allDone=false;});});
+  if (!allDone) return;
+  var ex=(appData.bracket)||{};
+  if (ex.qf&&Object.keys(ex.qf).length>0) return;
+  var sA=standings(pools.A.teams||[],pools.A.matches||{},tmap);
+  var sB=standings(pools.B.teams||[],pools.B.matches||{},tmap);
+  db.ref('tournaments/foot/'+currentYear+'/bracket/qf').set({
+    qf1:{id:'qf1',label:'QF1',teamA:(sA[0]||{}).id,teamB:(sB[3]||{}).id,scoreA:null,scoreB:null,done:false},
+    qf2:{id:'qf2',label:'QF2',teamA:(sB[1]||{}).id,teamB:(sA[2]||{}).id,scoreA:null,scoreB:null,done:false},
+    qf3:{id:'qf3',label:'QF3',teamA:(sB[0]||{}).id,teamB:(sA[3]||{}).id,scoreA:null,scoreB:null,done:false},
+    qf4:{id:'qf4',label:'QF4',teamA:(sA[1]||{}).id,teamB:(sB[2]||{}).id,scoreA:null,scoreB:null,done:false}
+  }).then(function(){toast('QF générés !','success');}).catch(function(err){toast('❌ '+err.message,'error');});
+}
+
+function tryGenSF(c,qfList,tmap,basePath){
+  if (qfList.length<4||!qfList.every(function(m){return m.done;})) return;
+  var ex=currentSport==='foot'?(appData.bracket||{}):((appData.bracket||{})[c]||{});
+  if (ex.sf&&Object.keys(ex.sf).length>=2) return;
+  var gw=function(m){return m.scoreA>=m.scoreB?m.teamA:m.teamB;};
+  var gl=function(m){return m.scoreA>=m.scoreB?m.teamB:m.teamA;};
+  var qb={}; qfList.forEach(function(m){qb[m.id]=m;});
+  var q1=qb.qf1||qfList[0],q2=qb.qf2||qfList[1],q3=qb.qf3||qfList[2],q4=qb.qf4||qfList[3];
+  db.ref(basePath+'/sf').set({
+    sf1:{id:'sf1',label:'SF1',teamA:gw(q1),teamB:gw(q2),scoreA:null,scoreB:null,done:false},
+    sf2:{id:'sf2',label:'SF2',teamA:gw(q3),teamB:gw(q4),scoreA:null,scoreB:null,done:false}
+  }).then(function(){toast('Demi-finales !','success');}).catch(function(err){toast('❌ '+err.message,'error');});
+  var consPath=currentSport==='foot'
+    ?'tournaments/foot/'+currentYear+'/consolation'
+    :'tournaments/basket/'+currentYear+'/consolation/'+c;
+  var consData=currentSport==='foot'?(appData.consolation||null):((appData.consolation||{})[c]||null);
+  if (!consData) db.ref(consPath).set({
+    cqf1:{id:'cqf1',label:'C-QF1',teamA:gl(q1),teamB:gl(q2),scoreA:null,scoreB:null,done:false},
+    cqf2:{id:'cqf2',label:'C-QF2',teamA:gl(q3),teamB:gl(q4),scoreA:null,scoreB:null,done:false}
+  }).catch(function(err){toast('❌ '+err.message,'error');});
+}
+
+function tryGenFinal(c,sfList,basePath){
+  if (sfList.length<2||!sfList.every(function(m){return m.done;})) return;
+  var ex=currentSport==='foot'?(appData.bracket||{}):((appData.bracket||{})[c]||{});
+  if (ex.final&&ex.final.teamA) return;
+  var gw=function(m){return m.scoreA>=m.scoreB?m.teamA:m.teamB;};
+  var gl=function(m){return m.scoreA>=m.scoreB?m.teamB:m.teamA;};
+  var sf1=sfList.find(function(m){return m.id==='sf1';})||sfList[0];
+  var sf2=sfList.find(function(m){return m.id==='sf2';})||sfList[1];
+  db.ref(basePath+'/final').set({teamA:gw(sf1),teamB:gw(sf2),scoreA:null,scoreB:null,done:false}).catch(function(e){toast('❌ '+e.message,'error');});
+  db.ref(basePath+'/thirdPlace').set({teamA:gl(sf1),teamB:gl(sf2),scoreA:null,scoreB:null,done:false}).catch(function(e){toast('❌ '+e.message,'error');});
+  toast('Finale créée !','success');
+}
+
+// ══════════════════════════════════════════════
+//  TABLEAU FINAL
+// ══════════════════════════════════════════════
+function renderTableau(){
+  var el=document.getElementById('tc');
+  var b,tmap,basePath,cats;
+  if (currentSport==='foot'){
+    b=appData.bracket||{};
+    tmap=Object.fromEntries(getTeams('foot').map(function(t){return[t.id,t];}));
+    basePath='tournaments/foot/'+currentYear+'/bracket';
+    cats=['foot'];
+  } else {
+    b=((appData.bracket)||{})[currentCat]||{};
+    tmap=Object.fromEntries(getTeams(currentCat).map(function(t){return[t.id,t];}));
+    basePath='tournaments/basket/'+currentYear+'/bracket/'+currentCat;
+    cats=[currentCat];
+  }
+  if (!b.qf||Object.keys(b.qf).length===0){el.innerHTML='<div class="empty"><div class="ei">🏆</div>Disponible après la phase de poules</div>';return;}
+  var qfl=Object.values(b.qf||{}), sfl=Object.values(b.sf||{});
+  tryGenSF(currentCat,qfl,tmap,basePath);
+  tryGenFinal(currentCat,sfl,basePath);
+  var gw=function(m){return m&&m.done?(m.scoreA>=m.scoreB?m.teamA:m.teamB):null;};
+  var gl=function(m){return m&&m.done?(m.scoreA>=m.scoreB?m.teamB:m.teamA):null;};
+  var qb={}; qfl.forEach(function(m){qb[m.id]=m;});
+  var sfb={}; sfl.forEach(function(m){sfb[m.id]=m;});
+  var sf1=sfb.sf1||(qb.qf1&&qb.qf2?{id:'sf1',teamA:gw(qb.qf1),teamB:gw(qb.qf2),scoreA:null,scoreB:null,done:false}:null);
+  var sf2=sfb.sf2||(qb.qf3&&qb.qf4?{id:'sf2',teamA:gw(qb.qf3),teamB:gw(qb.qf4),scoreA:null,scoreB:null,done:false}:null);
+  var fin=(b.final&&b.final.teamA)?b.final:(sf1&&sf2?{teamA:gw(sf1),teamB:gw(sf2),scoreA:null,scoreB:null,done:false}:null);
+  var tp=(b.thirdPlace&&b.thirdPlace.teamA)?b.thirdPlace:(sf1&&sf2?{teamA:gl(sf1),teamB:gl(sf2),scoreA:null,scoreB:null,done:false}:null);
+  var h='<div class="bracket-tree">';
+  h+='<div class="bracket-round"><div class="bracket-round-title">Quarts de finale</div>';
+  var qfOrder=[qb.qf1,qb.qf2,qb.qf3,qb.qf4].filter(Boolean);
+  qfOrder.forEach(function(m,i){h+=bmatchHTML(m,tmap,basePath+'/qf/'+m.id);if(i===1)h+='<div style="height:14px"></div>';});
+  h+='</div><div style="display:flex;align-items:center;padding:0 2px;padding-top:28px"><div style="width:16px;border-top:2px solid var(--g2)"></div></div>';
+  h+='<div class="bracket-round"><div class="bracket-round-title">Demi-finales</div>';
+  h+=(sf1?bmatchHTML(sf1,tmap,sfb.sf1?basePath+'/sf/sf1':null):bmatchTBD());
+  h+='<div style="height:14px"></div>';
+  h+=(sf2?bmatchHTML(sf2,tmap,sfb.sf2?basePath+'/sf/sf2':null):bmatchTBD());
+  h+='</div><div style="display:flex;align-items:center;padding:0 2px;padding-top:28px"><div style="width:16px;border-top:2px solid var(--g2)"></div></div>';
+  h+='<div class="bracket-round"><div class="bracket-round-title">Finale</div>';
+  h+=(fin&&fin.teamA?bmatchHTML(fin,tmap,(b.final&&b.final.teamA)?basePath+'/final':null):bmatchTBD());
+  h+='<div style="font-size:.68rem;font-weight:700;color:var(--g4);text-transform:uppercase;margin:10px 0 6px;padding-top:8px;border-top:2px solid var(--g2)">Petite finale</div>';
+  h+=(tp&&tp.teamA?bmatchHTML(tp,tmap,(b.thirdPlace&&b.thirdPlace.teamA)?basePath+'/thirdPlace':null):bmatchTBD());
+  h+='</div></div>';
+  el.innerHTML=h;
+}
+
+function bmatchTBD(){return '<div class="bmatch" style="margin-bottom:8px"><div class="bteam tbd">À déterminer</div><div class="bteam tbd">À déterminer</div></div>';}
+
+function bmatchHTML(m,tmap,path){
+  if (!m) return bmatchTBD();
+  var nA=m.teamA?(tmap[m.teamA]||{name:'?'}).name:null;
+  var nB=m.teamB?(tmap[m.teamB]||{name:'?'}).name:null;
+  var wA=m.done&&m.scoreA>m.scoreB, wB=m.done&&m.scoreB>m.scoreA;
+  var clA=m.done?(wA?'win':'los'):(nA?'':'tbd');
+  var clB=m.done?(wB?'win':'los'):(nB?'':'tbd');
+  var rowA='<div class="bteam '+clA+'">'+(nA||'<em>À déterminer</em>')+(m.done?'<span class="bscore">'+m.scoreA+'</span>':'')+'</div>';
+  var rowB='<div class="bteam '+clB+'">'+(nB||'<em>À déterminer</em>')+(m.done&&nB?'<span class="bscore">'+m.scoreB+'</span>':'')+'</div>';
+  var footer='';
+  if (path&&nA&&nB){
+    var ea=esc(nA),eb=esc(nB);
+    footer=m.done
+      ?'<div class="bmatch-footer"><button class="btn bgh sm" onclick="openModal(\''+path+'\',\''+ea+'\',\''+eb+'\','+m.scoreA+','+m.scoreB+')">✏️ Modifier</button></div>'
+      :'<div class="bmatch-footer"><button class="btn bp sm" onclick="openModal(\''+path+'\',\''+ea+'\',\''+eb+'\')">📝 Score</button></div>';
+  }
+  return '<div class="bmatch" style="margin-bottom:8px">'+rowA+rowB+footer+'</div>';
+}
+
+// ══════════════════════════════════════════════
+//  CONSOLATION
+// ══════════════════════════════════════════════
+function renderConsolation(){
+  var el=document.getElementById('cc');
+  var cons,consPath;
+  if (currentSport==='foot'){
+    cons=appData.consolation||null;
+    consPath='tournaments/foot/'+currentYear+'/consolation';
+  } else {
+    cons=((appData.consolation)||{})[currentCat]||null;
+    consPath='tournaments/basket/'+currentYear+'/consolation/'+currentCat;
+  }
+  if (!cons){el.innerHTML='<div class="empty"><div class="ei">🤝</div>Disponible après les quarts de finale</div>';return;}
+  var allTeams=currentSport==='foot'?getTeams('foot'):getTeams(currentCat);
+  var tmap=Object.fromEntries(allTeams.map(function(t){return[t.id,t];}));
+  var gw=function(m){return m&&m.done?(m.scoreA>=m.scoreB?m.teamA:m.teamB):null;};
+  var gl=function(m){return m&&m.done?(m.scoreA>=m.scoreB?m.teamB:m.teamA):null;};
+  var cqf1=cons.cqf1,cqf2=cons.cqf2;
+  if (cqf1&&cqf1.done&&cqf2&&cqf2.done){
+    if (!cons.csf1) db.ref(consPath+'/csf1').set({id:'csf1',label:'5e place',teamA:gw(cqf1),teamB:gw(cqf2),scoreA:null,scoreB:null,done:false}).catch(function(){});
+    if (!cons.cpf)  db.ref(consPath+'/cpf').set({id:'cpf',label:'7e place',teamA:gl(cqf1),teamB:gl(cqf2),scoreA:null,scoreB:null,done:false}).catch(function(){});
+  }
+  var groups=[
+    {title:'🏅 Quarts de consolation',ids:['cqf1','cqf2']},
+    {title:'5️⃣ Match pour la 5e place',ids:['csf1']},
+    {title:'7️⃣ Match pour la 7e place',ids:['cpf']}
+  ];
+  var html='';
+  groups.forEach(function(g){
+    var ms=g.ids.map(function(id){return cons[id];}).filter(Boolean);
+    if (!ms.length) return;
+    html+='<div class="card" style="margin-bottom:12px"><div class="card-title" style="font-size:.85rem">'+g.title+'</div>'
+      +ms.map(function(m){return matchItem(m,tmap,consPath.replace('tournaments/'+currentSport+'/'+currentYear+'/','')+ '/'+m.id);}).join('')+'</div>';
+  });
+  el.innerHTML=html||'<div class="empty"><div class="ei">🤝</div>Aucun match disponible</div>';
+}
+
+// ══════════════════════════════════════════════
+//  PALMARES
+// ══════════════════════════════════════════════
+function renderPalmares(){
+  var el=document.getElementById('palc');
+  var h='';
+  var gw=function(m){return m&&m.done?(m.scoreA>=m.scoreB?m.teamA:m.teamB):null;};
+  var gl=function(m){return m&&m.done?(m.scoreA>=m.scoreB?m.teamB:m.teamA):null;};
+
+  var renderOneCat=function(bracket,cons,tmap,label){
+    if (!bracket||!bracket.final||!bracket.final.done) return '';
+    var f=bracket.final,tp=bracket.thirdPlace;
+    var tn=function(id){return id?(tmap[id]||{name:id}).name:'?';};
+    var places=[
+      {rank:'🥇',label:'Champion',    id:gw(f),        detail:f.scoreA+'—'+f.scoreB,bg:'linear-gradient(135deg,#FFF8E1,#FFF3CD)',border:'2px solid #E6C84A',color:'color:#8B6914;font-weight:800;'},
+      {rank:'🥈',label:'2ème place',  id:gl(f),        detail:'',bg:'var(--g1)',border:'1px solid var(--g2)',color:''},
+      {rank:'🥉',label:'3ème place',  id:gw(tp),       detail:'',bg:'var(--accent-l)',border:'1px solid var(--accent-m)',color:'color:var(--accent);'},
+      {rank:'4️⃣',label:'4ème place', id:gl(tp),       detail:'',bg:'white',border:'1px solid var(--g2)',color:''},
+      {rank:'5️⃣',label:'5ème place', id:cons?gw(cons.csf1):null,detail:'',bg:'white',border:'1px solid var(--g2)',color:''},
+      {rank:'6️⃣',label:'6ème place', id:cons?gl(cons.csf1):null,detail:'',bg:'white',border:'1px solid var(--g2)',color:''},
+      {rank:'7️⃣',label:'7ème place', id:cons?gw(cons.cpf):null, detail:'',bg:'white',border:'1px solid var(--g2)',color:''},
+      {rank:'8️⃣',label:'8ème place', id:cons?gl(cons.cpf):null, detail:'',bg:'white',border:'1px solid var(--g2)',color:''}
+    ];
+    var rows='';
+    places.forEach(function(p){
+      if (!p.id) return;
+      rows+='<div style="display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:8px;background:'+p.bg+';border:'+p.border+';margin-bottom:7px">'
+        +'<span style="font-size:1.3rem;flex-shrink:0">'+p.rank+'</span>'
+        +'<div><div style="font-weight:700;'+p.color+'">'+tn(p.id)+'</div>'
+        +'<div style="font-size:.73rem;color:var(--g4)">'+p.label+(p.detail?' · '+p.detail:'')+'</div></div></div>';
+    });
+    return '<div class="card"><div class="card-title">🏆 '+label+'</div>'+rows+'</div>';
+  };
+
+  if (currentSport==='foot'){
+    var tmap=Object.fromEntries(getTeams('foot').map(function(t){return[t.id,t];}));
+    h+=renderOneCat(appData.bracket||{},appData.consolation||null,tmap,'Football');
+  } else {
+    ['benjamin','minime'].forEach(function(c){
+      var tmap=Object.fromEntries(getTeams(c).map(function(t){return[t.id,t];}));
+      var br=((appData.bracket)||{})[c]||{};
+      var con=((appData.consolation)||{})[c]||null;
+      h+=renderOneCat(br,con,tmap,c==='benjamin'?'Benjamins':'Minimes');
+    });
+  }
+  if (!h) h='<div class="empty"><div class="ei">🥇</div>Disponible en fin de tournoi</div>';
+  el.innerHTML=h;
+}
+
+// ══════════════════════════════════════════════
+//  HISTORIQUE
+// ══════════════════════════════════════════════
+function renderHistoFromData(all){
+  var el=document.getElementById('hc');
+  var years=Object.keys(all).sort(function(a,b){return b-a;});
+  if (!years.length){el.innerHTML='<div class="empty"><div class="ei">📅</div>Aucun historique pour '+currentSport+'</div>';return;}
+  el.innerHTML=years.map(function(y){
+    var d=all[y];
+    var teamsCount=0;
+    if (currentSport==='basket'){
+      teamsCount=Object.keys((d.teams||{}).benjamin||{}).length+Object.keys((d.teams||{}).minime||{}).length;
+    } else {
+      teamsCount=Object.keys(d.teams||{}).length;
+    }
+    var st=(d.meta||{}).status;
+    return '<div class="hi" onclick="switchYear(\''+y+'\');goNav(\'inscriptions\')">'
+      +'<div><div class="hy">Édition '+y+'</div><div class="hs">'+teamsCount+' équipes</div></div>'
+      +'<span class="st '+(st==='done'?'st-d':'st-p')+'">'+(st==='done'?'✅ Terminé':'🔄 En cours')+'</span>'
+      +'</div>';
+  }).join('');
+}
+
+// ══════════════════════════════════════════════
+//  PDF
+// ══════════════════════════════════════════════
+function exportPDF(){
+  if (!currentYear) return toast('Sélectionnez une édition','error');
+  var doc=new window.jspdf.jsPDF(); var y=22;
+  var sportLabel=currentSport==='foot'?'Football':'Basket-ball';
+  doc.setFont('helvetica','bold');doc.setFontSize(16);doc.setTextColor(26,58,92);
+  doc.text('Tournoi EPS — '+sportLabel+' — Édition '+currentYear,14,y);y+=8;
+  doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(130,130,130);
+  doc.text('Collège Pasteur · Villemomble — Généré le '+new Date().toLocaleDateString('fr-FR'),14,y);y+=12;
+  var catsToExport=currentSport==='foot'?['foot']:['benjamin','minime'];
+  catsToExport.forEach(function(c){
+    var tmap, pools, bracket, label;
+    if (currentSport==='foot'){label='Football';tmap=Object.fromEntries(getTeams('foot').map(function(t){return[t.id,t];}));pools=appData.pools||{};bracket=appData.bracket||{};}
+    else{label=c==='benjamin'?'Benjamins':'Minimes';tmap=Object.fromEntries(getTeams(c).map(function(t){return[t.id,t];}));pools=((appData.pools)||{})[c]||{};bracket=((appData.bracket)||{})[c]||{};}
+    doc.setFont('helvetica','bold');doc.setFontSize(13);
+    doc.setTextColor(currentSport==='foot'?45:232,currentSport==='foot'?125:96,currentSport==='foot'?70:28);
+    doc.text('▶ '+label,14,y);y+=8;
+    if (pools&&(pools.A||pools.B)){['A','B'].forEach(function(pool){
+      var p=pools[pool];if(!p)return;
+      var st=standings(p.teams||[],p.matches||{},tmap);
+      doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(50,50,50);
+      doc.text('Classement Poule '+pool,14,y);y+=4;
+      doc.autoTable({startY:y,head:[['#','Équipe','J','V','D','Pts','+/-']],body:st.map(function(s,i){return[i+1,s.name,s.played,s.wins,s.losses,s.points,s.diff];}),styles:{fontSize:9,cellPadding:2},headStyles:{fillColor:[26,58,92]},margin:{left:14,right:14}});
+      y=doc.lastAutoTable.finalY+6;
+    });}
+    if (bracket){
+      var rounds=[{label:'Quarts',matches:Object.values(bracket.qf||{})},{label:'Demies',matches:Object.values(bracket.sf||{})},{label:'Finale',matches:bracket.final&&bracket.final.teamA?[bracket.final]:[]},{label:'Petite Finale',matches:bracket.thirdPlace&&bracket.thirdPlace.teamA?[bracket.thirdPlace]:[]}];
+      rounds.forEach(function(r){if(!r.matches.length)return;doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(50,50,50);doc.text(r.label,14,y);y+=4;doc.autoTable({startY:y,head:[['Match','Équipe A','Score','Équipe B','Statut']],body:r.matches.map(function(m){return[m.label||'',(tmap[m.teamA]||{name:m.teamA||''}).name,m.done?m.scoreA+'—'+m.scoreB:'À jouer',(tmap[m.teamB]||{name:m.teamB||''}).name,m.done?'Terminé':'En attente'];}),styles:{fontSize:9,cellPadding:2},headStyles:{fillColor:currentSport==='foot'?[45,125,70]:[232,96,28]},margin:{left:14,right:14}});y=doc.lastAutoTable.finalY+6;});
+    }
+    if (y>260){doc.addPage();y=20;}else{y+=6;}
+  });
+  doc.save('tournoi-'+currentSport+'-'+currentYear+'.pdf');
+  toast('PDF exporté !','success');
+}
+
+// ══════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════
+function toast(msg,type){
+  var t=document.getElementById('toast');
+  t.textContent=msg;t.className='show '+(type||'');
+  clearTimeout(t._t);t._t=setTimeout(function(){t.className='';},2800);
+}
+</script>
+</body>
+</html>
